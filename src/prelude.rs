@@ -10,6 +10,7 @@ pub use regex::Regex;
 
 pub enum Answer {
     Usize(usize),
+    I32(i32),
 }
 
 impl From<usize> for Answer {
@@ -18,10 +19,17 @@ impl From<usize> for Answer {
     }
 }
 
+impl From<i32> for Answer {
+    fn from(v: i32) -> Answer {
+        Answer::I32(v)
+    }
+}
+
 impl fmt::Display for Answer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Answer::Usize(v) => write!(f, "{}", v),
+            Answer::I32(v) => write!(f, "{}", v),
         }
     }
 }
@@ -30,9 +38,9 @@ pub struct Answers(Answer, Option<Answer>);
 
 impl fmt::Display for Answers {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Regular answer: {}", self.0)?;
+        write!(f, "First answer: {}", self.0)?;
         if let Some(ref bonus) = self.1 {
-            write!(f, ", bonus answer: {}", bonus)?;
+            write!(f, ", second answer: {}", bonus)?;
         }
         Ok(())
     }
