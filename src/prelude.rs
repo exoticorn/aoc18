@@ -1,4 +1,4 @@
-use quicli::prelude::*;
+pub use quicli::prelude::*;
 use std::cell::Cell;
 use std::fmt;
 use std::fs::File;
@@ -13,6 +13,7 @@ pub use regex::Regex;
 pub enum Answer {
     Usize(usize),
     I32(i32),
+    String(String),
 }
 
 impl From<usize> for Answer {
@@ -27,11 +28,18 @@ impl From<i32> for Answer {
     }
 }
 
+impl From<String> for Answer {
+    fn from(v: String) -> Answer {
+        Answer::String(v)
+    }
+}
+
 impl fmt::Display for Answer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Answer::Usize(v) => write!(f, "{}", v),
             Answer::I32(v) => write!(f, "{}", v),
+            Answer::String(ref v) => write!(f, "{}", v),
         }
     }
 }
