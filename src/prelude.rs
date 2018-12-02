@@ -4,7 +4,9 @@ use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
+use std::marker::PhantomData;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 pub use regex::Regex;
 
@@ -77,10 +79,17 @@ impl AocData {
     }
 
     #[allow(dead_code)]
-    pub fn lines(&self) -> Result<AocLines> {
+    pub fn lines(&self) -> Result<AocLines<String>> {
+        self.values()
+    }
+
+    #[allow(dead_code)]
+    pub fn values<T: FromStr>(&self) -> Result<AocLines<T>> {
         Ok(AocLines {
             file: BufReader::new(File::open(&self.path)?),
             error: &self.error,
+            buffer: String::new(),
+            t: PhantomData,
         })
     }
 
@@ -92,22 +101,30 @@ impl AocData {
     }
 }
 
-pub struct AocLines<'a> {
+pub struct AocLines<'a, T: FromStr> {
     file: BufReader<File>,
     error: &'a Cell<Option<Error>>,
+    buffer: String,
+    t: PhantomData<T>,
 }
 
-impl<'a> Iterator for AocLines<'a> {
-    type Item = String;
+impl<'a, T: FromStr> Iterator for AocLines<'a, T> {
+    type Item = T;
 
-    fn next(&mut self) -> Option<String> {
-        let mut result = String::new();
-        match self.file.read_line(&mut result) {
+    fn next(&mut self) -> Option<T> {
+        self.buffer.clear();
+        match self.file.read_line(&mut self.buffer) {
             Ok(0) => None,
             Ok(_) => {
-                let len = result.trim_right().len();
-                result.truncate(len);
-                Some(result)
+                let trimmed = self.buffer.trim_right();
+                match trimmed.parse() {
+                    Ok(r) => Some(r),
+                    Err(_) => {
+                        self.error
+                            .set(Some(format_err!("Failed to parse '{}'", trimmed)));
+                        None
+                    }
+                }
             }
             Err(err) => {
                 self.error.set(Some(err.into()));
