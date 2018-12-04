@@ -13,6 +13,7 @@ pub use regex::Regex;
 pub enum Answer {
     Usize(usize),
     I32(i32),
+    U32(u32),
     String(String),
 }
 
@@ -28,6 +29,12 @@ impl From<i32> for Answer {
     }
 }
 
+impl From<u32> for Answer {
+    fn from(v: u32) -> Answer {
+        Answer::U32(v)
+    }
+}
+
 impl From<String> for Answer {
     fn from(v: String) -> Answer {
         Answer::String(v)
@@ -39,6 +46,7 @@ impl fmt::Display for Answer {
         match *self {
             Answer::Usize(v) => write!(f, "{}", v),
             Answer::I32(v) => write!(f, "{}", v),
+            Answer::U32(v) => write!(f, "{}", v),
             Answer::String(ref v) => write!(f, "{}", v),
         }
     }
