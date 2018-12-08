@@ -91,7 +91,9 @@ impl AocData {
 
     #[allow(dead_code)]
     pub fn to_string(&self) -> Result<String> {
-        read_file(&self.path)
+        let mut s = read_file(&self.path)?;
+        s.truncate(s.trim_right().len());
+        Ok(s)
     }
 
     #[allow(dead_code)]
