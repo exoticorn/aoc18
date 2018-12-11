@@ -2,6 +2,7 @@ use crate::prelude::*;
 
 mod day1;
 mod day10;
+mod day11;
 mod day2;
 mod day3;
 mod day4;
@@ -22,4 +23,5 @@ pub const DAYS: &'static [fn(&AocData) -> AocResult] = &[
     self::day8::run,
     self::day9::run,
     self::day10::run,
+    self::day11::run,
 ];

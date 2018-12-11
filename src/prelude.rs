@@ -10,45 +10,47 @@ use std::str::FromStr;
 
 pub use regex::Regex;
 
-pub enum Answer {
-    Usize(usize),
-    I32(i32),
-    U32(u32),
-    String(String),
-}
+pub struct Answer(String);
 
 impl From<usize> for Answer {
     fn from(v: usize) -> Answer {
-        Answer::Usize(v)
+        Answer(v.to_string())
     }
 }
 
 impl From<i32> for Answer {
     fn from(v: i32) -> Answer {
-        Answer::I32(v)
+        Answer(v.to_string())
     }
 }
 
 impl From<u32> for Answer {
     fn from(v: u32) -> Answer {
-        Answer::U32(v)
+        Answer(v.to_string())
     }
 }
 
 impl From<String> for Answer {
     fn from(v: String) -> Answer {
-        Answer::String(v)
+        Answer(v)
+    }
+}
+
+impl<A: Into<Answer>, B: Into<Answer>> From<(A, B)> for Answer {
+    fn from(v: (A, B)) -> Answer {
+        Answer(format!("({}, {})", v.0.into(), v.1.into()))
+    }
+}
+
+impl<A: Into<Answer>, B: Into<Answer>, C: Into<Answer>> From<(A, B, C)> for Answer {
+    fn from(v: (A, B, C)) -> Answer {
+        Answer(format!("({}, {}, {})", v.0.into(), v.1.into(), v.2.into()))
     }
 }
 
 impl fmt::Display for Answer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Answer::Usize(v) => write!(f, "{}", v),
-            Answer::I32(v) => write!(f, "{}", v),
-            Answer::U32(v) => write!(f, "{}", v),
-            Answer::String(ref v) => write!(f, "{}", v),
-        }
+        write!(f, "{}", self.0)
     }
 }
 
