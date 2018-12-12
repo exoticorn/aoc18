@@ -18,6 +18,12 @@ impl From<usize> for Answer {
     }
 }
 
+impl From<isize> for Answer {
+    fn from(v: isize) -> Answer {
+        Answer(v.to_string())
+    }
+}
+
 impl From<i32> for Answer {
     fn from(v: i32) -> Answer {
         Answer(v.to_string())
