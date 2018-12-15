@@ -6,6 +6,7 @@ mod day11;
 mod day12;
 mod day13;
 mod day14;
+mod day15;
 mod day2;
 mod day3;
 mod day4;
@@ -30,4 +31,5 @@ pub const DAYS: &'static [fn(&AocData) -> AocResult] = &[
     self::day12::run,
     self::day13::run,
     self::day14::run,
+    self::day15::run,
 ];

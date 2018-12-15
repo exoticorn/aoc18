@@ -1,9 +1,11 @@
+#![allow(dead_code)]
+
 pub use quicli::prelude::*;
 use std::cell::Cell;
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::BufReader;
+use std::io::{BufReader, Cursor};
 use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -74,45 +76,58 @@ impl fmt::Display for Answers {
 
 pub type AocResult = Result<Answers>;
 
-#[allow(dead_code)]
 pub fn answer<T: Into<Answer>>(v: T) -> AocResult {
     Ok(Answers(v.into(), None))
 }
 
-#[allow(dead_code)]
 pub fn answers<A: Into<Answer>, B: Into<Answer>>(a: A, b: B) -> AocResult {
     Ok(Answers(a.into(), Some(b.into())))
 }
 
+enum DataSrc {
+    Path(PathBuf),
+    Str(&'static str),
+}
+
 pub struct AocData {
-    path: PathBuf,
+    data: DataSrc,
     error: Cell<Option<Error>>,
 }
 
 impl AocData {
     pub fn new(day: usize) -> AocData {
         AocData {
-            path: format!("data/{:02}.txt", day).into(),
+            data: DataSrc::Path(format!("data/{:02}.txt", day).into()),
             error: Cell::new(None),
         }
     }
 
-    #[allow(dead_code)]
+    pub fn from_str(s: &'static str) -> AocData {
+        AocData {
+            data: DataSrc::Str(s.trim()),
+            error: Cell::new(None),
+        }
+    }
+
     pub fn to_string(&self) -> Result<String> {
-        let mut s = read_file(&self.path)?;
+        let mut s = match self.data {
+            DataSrc::Path(ref path) => read_file(path)?,
+            DataSrc::Str(s) => s.to_string(),
+        };
         s.truncate(s.trim_right().len());
         Ok(s)
     }
 
-    #[allow(dead_code)]
     pub fn lines(&self) -> Result<AocLines<String>> {
         self.values()
     }
 
-    #[allow(dead_code)]
     pub fn values<T: FromStr>(&self) -> Result<AocLines<T>> {
         Ok(AocLines {
-            file: BufReader::new(File::open(&self.path)?),
+            file: match self.data {
+                DataSrc::Path(ref path) => Box::new(BufReader::new(File::open(path)?)),
+                DataSrc::Str(s) => Box::new(Cursor::new(s)),
+            },
             error: &self.error,
             buffer: String::new(),
             t: PhantomData,
@@ -128,7 +143,7 @@ impl AocData {
 }
 
 pub struct AocLines<'a, T: FromStr> {
-    file: BufReader<File>,
+    file: Box<dyn BufRead>,
     error: &'a Cell<Option<Error>>,
     buffer: String,
     t: PhantomData<T>,

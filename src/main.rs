@@ -3,6 +3,7 @@ extern crate quicli;
 
 use quicli::prelude::*;
 
+mod array2d;
 mod days;
 mod prelude;
 
