@@ -38,6 +38,12 @@ impl From<u32> for Answer {
     }
 }
 
+impl From<u8> for Answer {
+    fn from(v: u8) -> Answer {
+        Answer(v.to_string())
+    }
+}
+
 impl From<String> for Answer {
     fn from(v: String) -> Answer {
         Answer(v)

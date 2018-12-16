@@ -3,9 +3,13 @@ use crate::prelude::*;
 
 pub fn run(data: &AocData) -> AocResult {
     let map = load_map(data)?;
-    let mut simulation = Simulation::new(map);
+    let mut simulation = Simulation::new(map.clone(), 3);
     simulation.run();
-    answer(simulation.outcome())
+
+    let needed_ap = find_needed_ap(map.clone());
+    let mut winning_simulation = Simulation::new(map, needed_ap);
+    winning_simulation.run();
+    answers(simulation.outcome(), winning_simulation.outcome())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,16 +51,45 @@ fn load_map(data: &AocData) -> Result<Array2d<Tile>> {
     Ok(map)
 }
 
+fn find_needed_ap(map: Array2d<Tile>) -> u8 {
+    let mut min = 3u8;
+    let mut max = 7u8;
+    while max < 200 {
+        if test_ap(&map, max) {
+            break;
+        }
+        min = max;
+        max *= 2;
+    }
+    while min + 1 < max {
+        let mid = ((min as u32 + max as u32) / 2) as u8;
+        if test_ap(&map, mid) {
+            max = mid;
+        } else {
+            min = mid;
+        }
+    }
+    max
+}
+
+fn test_ap(map: &Array2d<Tile>, ap: u8) -> bool {
+    let mut simulation = Simulation::new(map.clone(), ap);
+    let num_elves = simulation.num_elves();
+    simulation.run();
+    simulation.num_elves() == num_elves
+}
+
 struct Simulation {
     map: Array2d<Tile>,
     moved: Array2d<bool>,
     targets: Array2d<bool>,
     distances: Array2d<u8>,
     num_rounds: usize,
+    ap_elves: u8,
 }
 
 impl Simulation {
-    fn new(map: Array2d<Tile>) -> Simulation {
+    fn new(map: Array2d<Tile>, ap_elves: u8) -> Simulation {
         let width = map.width();
         let height = map.height();
         Simulation {
@@ -65,6 +98,7 @@ impl Simulation {
             targets: Array2d::new(width, height),
             distances: Array2d::new(width, height),
             num_rounds: 0,
+            ap_elves,
         }
     }
 
@@ -96,6 +130,16 @@ impl Simulation {
     fn outcome(&self) -> usize {
         let (a, b) = self.hp_sum();
         (a + b) * self.num_rounds
+    }
+
+    fn num_elves(&self) -> usize {
+        self.map
+            .iter_xy()
+            .filter(|&c| match self.map[c] {
+                Tile::Fighter { elf: true, .. } => true,
+                _ => false,
+            })
+            .count()
     }
 
     fn hp_sum(&self) -> (usize, usize) {
@@ -237,7 +281,7 @@ impl Simulation {
             for (x, y) in neighbors(x, y) {
                 match self.map.get(x, y) {
                     Tile::Fighter { hp, elf } if hp == min_hp && elf == elves => {
-                        let new_hp = hp.saturating_sub(3);
+                        let new_hp = hp.saturating_sub(if !elf { self.ap_elves } else { 3 });
                         self.map.put(
                             x,
                             y,
@@ -270,7 +314,7 @@ mod test {
 
     fn run_testcase(s: &'static str, outcome: usize) {
         let data = AocData::from_str(s);
-        let mut simulation = Simulation::new(load_map(&data).unwrap());
+        let mut simulation = Simulation::new(load_map(&data).unwrap(), 3);
         simulation.run();
         assert_eq!(simulation.outcome(), outcome);
     }
