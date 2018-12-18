@@ -2,7 +2,7 @@
 
 use std::ops::{Index, IndexMut};
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct Array2d<T> {
     data: Vec<T>,
     width: usize,

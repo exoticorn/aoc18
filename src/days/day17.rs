@@ -195,5 +195,6 @@ y=13, x=498..504
 
     print_map(&map);
 
-    assert_eq!(count_water(&map, &offsets), 57);
+    let (a, b) = count_water(&map, &offsets);
+    assert_eq!(a + b, 57);
 }
