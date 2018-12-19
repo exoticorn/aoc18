@@ -1,0 +1,51 @@
+#ip 3
+00: addi 3 16 3 ; jump to start
+
+01: seti 1 8 1
+02: seti 1 3 4
+03: mulr 1 4 2
+04: eqrr 2 5 2
+05: addr 2 3 3
+06: addi 3 1 3
+07: addr 1 0 0
+08: addi 4 1 4
+09: gtrr 4 5 2
+10: addr 3 2 3
+11: seti 2 6 3
+12: addi 1 1 1
+13: gtrr 1 5 2
+14: addr 2 3 3
+15: seti 1 5 3
+16: mulr 3 3 3
+start:
+17: addi 5 2 5
+18: mulr 5 5 5
+19: mulr 3 5 5
+20: muli 5 11 5
+21: addi 2 5 2
+22: mulr 2 3 2
+23: addi 2 21 2
+24: addr 5 2 5
+25: addr 3 0 3
+26: seti 0 4 3
+27: setr 3 1 2
+28: mulr 2 3 2
+29: addr 3 2 2
+30: mulr 3 2 2
+31: muli 2 14 2
+32: mulr 2 3 2
+33: addr 5 2 5
+34: seti 0 3 0
+35: seti 0 6 3
+
+r1 = 1;
+loop {
+  r4 = 1;
+  loop{
+    if r1 * r4 == r5 { r0 += r1 }
+    r4 += 1;
+    if r4 > r5 { break }
+  }
+  r1 += 1;
+  if r1 > r5 { break }
+}

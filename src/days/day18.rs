@@ -77,14 +77,12 @@ fn resource_value_after(field: &mut Field, minutes: usize) -> usize {
 
 fn step(src: &Field, dest: &mut Field) {
     for (x, y) in src.iter_xy() {
-        // let mut num_open = 0;
         let mut num_wooded = 0;
         let mut num_lumberyard = 0;
         for yo in 0..3 {
             for xo in 0..3 {
                 if xo != 1 || yo != 1 {
                     match src.get((x + xo).wrapping_sub(1), (y + yo).wrapping_sub(1)) {
-                        // Tile::Open => num_open += 1,
                         Tile::Wooded => num_wooded += 1,
                         Tile::Lumberyard => num_lumberyard += 1,
                         _ => (),
