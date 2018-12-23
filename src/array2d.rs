@@ -168,3 +168,22 @@ impl Iterator for IterXY {
         }
     }
 }
+
+pub struct DynArray2d<T>(Vec<Vec<T>>);
+
+impl<T: Default> DynArray2d<T> {
+    pub fn new() -> DynArray2d<T> {
+        DynArray2d(Vec::new())
+    }
+
+    pub fn get_mut(&mut self, x: usize, y: usize) -> &mut T {
+        while self.0.len() <= y {
+            self.0.push(Vec::new());
+        }
+        let row = &mut self.0[y];
+        while row.len() <= x {
+            row.push(T::default());
+        }
+        &mut row[x]
+    }
+}
