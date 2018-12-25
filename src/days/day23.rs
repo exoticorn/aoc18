@@ -1,13 +1,12 @@
+use crate::array2d::Array2d;
 use crate::prelude::*;
 use std::cmp;
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
 use std::i32;
 
 pub fn run(data: &AocData) -> AocResult {
     let bots = parse_input(data)?;
-    intersect_bots(&bots);
-    answer(num_in_range_of_strongest(&bots))
+    let closest_max = intersect_bots(&bots);
+    answers(num_in_range_of_strongest(&bots), closest_max)
 }
 
 struct Bot {
@@ -55,35 +54,95 @@ fn num_in_range_of_strongest(bots: &[Bot]) -> usize {
         .count()
 }
 
-fn intersect_bots(bots: &[Bot]) {
-    let mut new_boxes: Vec<(Box4d, usize)> = vec![];
-    let mut boxes: HashMap<Box4d, usize> = HashMap::new();
+type IntersectingBots = Array2d<bool>;
 
-    for (index, bot) in bots.iter().enumerate() {
-        let bot_box = bot_to_box(bot);
-        for (box_, &count) in boxes.iter() {
-            if let Some(intersection) = box_.intersect(&bot_box) {
-                new_boxes.push((intersection, count + 1));
+fn intersect_bots(bots: &[Bot]) -> i32 {
+    let mut intersections = Array2d::new(bots.len(), bots.len());
+    for (i, bot_a) in bots.iter().enumerate() {
+        for (j, bot_b) in bots.iter().enumerate() {
+            if bot_a.dist(bot_b.x, bot_b.y, bot_b.z) < bot_a.r + bot_b.r {
+                intersections[(i, j)] = true;
             }
         }
-        new_boxes.push((bot_box, 1));
-        print!("Adding bot {}, {} new boxes...", index + 1, new_boxes.len());
-        for (box_, count) in new_boxes.drain(..) {
-            match boxes.entry(box_) {
-                Entry::Occupied(mut occ) => {
-                    let c = occ.get_mut();
-                    *c = cmp::max(*c, count);
-                }
-                Entry::Vacant(vac) => {
-                    vac.insert(count);
-                }
-            }
-        }
-        println!("{} boxes total", boxes.len());
     }
+
+    fn add_to_set(
+        bots: &[Bot],
+        intersections: &IntersectingBots,
+        mut set: Vec<bool>,
+        start: usize,
+        max_size: &mut usize,
+        closest_max: &mut i32,
+    ) {
+        let mut size = set.iter().filter(|&&b| b).count();
+        let mut any = false;
+        for i in start..set.len() {
+            if size < *max_size {
+                return;
+            }
+            if !set[i] {
+                continue;
+            }
+            any = true;
+            let mut new_set = set.clone();
+            for j in (i + 1)..set.len() {
+                if !intersections[(i, j)] {
+                    new_set[j] = false;
+                }
+            }
+            add_to_set(bots, intersections, new_set, i + 1, max_size, closest_max);
+            set[i] = false;
+            size -= 1;
+        }
+
+        if !any {
+            if size >= *max_size {
+                let mut b = Box4d::all();
+                for (i, bot) in bots.iter().enumerate() {
+                    if set[i] {
+                        b = b.intersect(&bot_to_box(bot)).unwrap();
+                    }
+                }
+                fn dist(min: i32, max: i32) -> i32 {
+                    if min < 0 && max > 0 {
+                        0
+                    } else {
+                        cmp::min(min.abs(), max.abs())
+                    }
+                }
+                *closest_max = cmp::max(
+                    dist(b.a_min, b.a_max),
+                    cmp::max(
+                        dist(b.b_min, b.b_max),
+                        cmp::max(dist(b.c_min, b.c_max), dist(b.d_min, b.d_max)),
+                    ),
+                );
+                *max_size = size;
+            }
+        }
+    }
+
+    let mut max_size = 0;
+    let mut closest_max = i32::MAX;
+    for i in 0..bots.len() {
+        let mut set = vec![false; bots.len()];
+        for j in i..bots.len() {
+            set[j] = intersections[(i, j)];
+        }
+        add_to_set(
+            bots,
+            &intersections,
+            set,
+            i + 1,
+            &mut max_size,
+            &mut closest_max,
+        );
+    }
+
+    closest_max
 }
 
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 struct Box4d {
     a_min: i32,
     a_max: i32,
@@ -96,6 +155,19 @@ struct Box4d {
 }
 
 impl Box4d {
+    fn all() -> Box4d {
+        Box4d {
+            a_min: i32::MIN,
+            a_max: i32::MAX,
+            b_min: i32::MIN,
+            b_max: i32::MAX,
+            c_min: i32::MIN,
+            c_max: i32::MAX,
+            d_min: i32::MIN,
+            d_max: i32::MAX,
+        }
+    }
+
     fn intersect(&self, o: &Box4d) -> Option<Box4d> {
         let new_box = Box4d {
             a_min: cmp::max(self.a_min, o.a_min),
