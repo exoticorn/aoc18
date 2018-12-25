@@ -120,7 +120,7 @@ impl AocData {
             DataSrc::Path(ref path) => read_file(path)?,
             DataSrc::Str(s) => s.to_string(),
         };
-        s.truncate(s.trim_right().len());
+        s.truncate(s.trim_end().len());
         Ok(s)
     }
 
@@ -163,7 +163,7 @@ impl<'a, T: FromStr> Iterator for AocLines<'a, T> {
         match self.file.read_line(&mut self.buffer) {
             Ok(0) => None,
             Ok(_) => {
-                let trimmed = self.buffer.trim_right();
+                let trimmed = self.buffer.trim_end();
                 match trimmed.parse() {
                     Ok(r) => Some(r),
                     Err(_) => {
