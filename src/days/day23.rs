@@ -83,16 +83,22 @@ fn intersect_bots(bots: &[Bot]) -> i32 {
             if !set[i] {
                 continue;
             }
-            any = true;
+            let mut cleared_any = false;
             let mut new_set = set.clone();
             for j in (i + 1)..set.len() {
-                if !intersections[(i, j)] {
-                    new_set[j] = false;
+                if new_set[j] {
+                    if !intersections[(i, j)] {
+                        new_set[j] = false;
+                        cleared_any = true;
+                    }
                 }
             }
-            add_to_set(bots, intersections, new_set, i + 1, max_size, closest_max);
-            set[i] = false;
-            size -= 1;
+            if cleared_any {
+                any = true;
+                add_to_set(bots, intersections, new_set, i + 1, max_size, closest_max);
+                set[i] = false;
+                size -= 1;
+            }
         }
 
         if !any {
