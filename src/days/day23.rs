@@ -1,10 +1,12 @@
 use crate::prelude::*;
+use std::cmp;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::i32;
 
 pub fn run(data: &AocData) -> AocResult {
     let bots = parse_input(data)?;
-    let tree = tree_from_bots(&bots);
-    println!("Tree size: {}", tree.len());
+    intersect_bots(&bots);
     answer(num_in_range_of_strongest(&bots))
 }
 
@@ -53,38 +55,35 @@ fn num_in_range_of_strongest(bots: &[Bot]) -> usize {
         .count()
 }
 
-fn tree_from_bots(bots: &[Bot]) -> BspTree {
-    let mut tree = new_tree();
+fn intersect_bots(bots: &[Bot]) {
+    let mut new_boxes: Vec<(Box4d, usize)> = vec![];
+    let mut boxes: HashMap<Box4d, usize> = HashMap::new();
+
     for (index, bot) in bots.iter().enumerate() {
-        let new_box = bot_to_box(bot);
-        add_box(&mut tree, &new_box);
-        println!("Tree after {} bots: {}", index + 1, tree.len());
+        let bot_box = bot_to_box(bot);
+        for (box_, &count) in boxes.iter() {
+            if let Some(intersection) = box_.intersect(&bot_box) {
+                new_boxes.push((intersection, count + 1));
+            }
+        }
+        new_boxes.push((bot_box, 1));
+        print!("Adding bot {}, {} new boxes...", index + 1, new_boxes.len());
+        for (box_, count) in new_boxes.drain(..) {
+            match boxes.entry(box_) {
+                Entry::Occupied(mut occ) => {
+                    let c = occ.get_mut();
+                    *c = cmp::max(*c, count);
+                }
+                Entry::Vacant(vac) => {
+                    vac.insert(count);
+                }
+            }
+        }
+        println!("{} boxes total", boxes.len());
     }
-    tree
 }
 
-#[derive(Debug, Clone, Copy)]
-enum Axis {
-    A, // +x +y +z
-    B, // +x +y -z
-    C, // +x -y +z
-    D, // +x -y -z
-}
-
-enum BspNode {
-    Leaf {
-        num_in_range: usize,
-    },
-    Branch {
-        axis: Axis,
-        split_at: i32,
-        children: u32,
-    },
-}
-
-type BspTree = Vec<BspNode>;
-
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 struct Box4d {
     a_min: i32,
     a_max: i32,
@@ -94,6 +93,30 @@ struct Box4d {
     c_max: i32,
     d_min: i32,
     d_max: i32,
+}
+
+impl Box4d {
+    fn intersect(&self, o: &Box4d) -> Option<Box4d> {
+        let new_box = Box4d {
+            a_min: cmp::max(self.a_min, o.a_min),
+            a_max: cmp::min(self.a_max, o.a_max),
+            b_min: cmp::max(self.b_min, o.b_min),
+            b_max: cmp::min(self.b_max, o.b_max),
+            c_min: cmp::max(self.c_min, o.c_min),
+            c_max: cmp::min(self.c_max, o.c_max),
+            d_min: cmp::max(self.d_min, o.d_min),
+            d_max: cmp::min(self.d_max, o.d_max),
+        };
+        if new_box.a_max > new_box.a_min
+            && new_box.b_max > new_box.b_min
+            && new_box.c_max > new_box.c_min
+            && new_box.d_max > new_box.d_min
+        {
+            Some(new_box)
+        } else {
+            None
+        }
+    }
 }
 
 fn bot_to_box(bot: &Bot) -> Box4d {
@@ -112,130 +135,4 @@ fn bot_to_box(bot: &Bot) -> Box4d {
         d_min: d - r,
         d_max: d + r + 1,
     }
-}
-
-fn new_tree() -> BspTree {
-    vec![BspNode::Leaf { num_in_range: 0 }]
-}
-
-fn add_box(tree: &mut BspTree, new_box: &Box4d) {
-    fn add_box_node(tree: &mut BspTree, node: usize, node_box: Box4d, new_box: &Box4d) {
-        loop {
-            match tree[node] {
-                BspNode::Leaf {
-                    ref mut num_in_range,
-                } => {
-                    if new_box.a_min > node_box.a_min && new_box.a_min < node_box.a_max {
-                        split_node(tree, node, Axis::A, new_box.a_min);
-                        continue;
-                    } else if new_box.a_max > node_box.a_min && new_box.a_max < node_box.a_max {
-                        split_node(tree, node, Axis::A, new_box.a_max);
-                        continue;
-                    } else if new_box.b_min > node_box.b_min && new_box.b_min < node_box.b_max {
-                        split_node(tree, node, Axis::B, new_box.b_min);
-                        continue;
-                    } else if new_box.b_max > node_box.b_min && new_box.b_max < node_box.b_max {
-                        split_node(tree, node, Axis::B, new_box.b_max);
-                        continue;
-                    } else if new_box.c_min > node_box.c_min && new_box.c_min < node_box.c_max {
-                        split_node(tree, node, Axis::C, new_box.c_min);
-                        continue;
-                    } else if new_box.c_max > node_box.c_min && new_box.c_max < node_box.c_max {
-                        split_node(tree, node, Axis::C, new_box.c_max);
-                        continue;
-                    } else if new_box.d_min > node_box.d_min && new_box.d_min < node_box.d_max {
-                        split_node(tree, node, Axis::D, new_box.d_min);
-                        continue;
-                    } else if new_box.d_max > node_box.d_min && new_box.d_max < node_box.d_max {
-                        split_node(tree, node, Axis::D, new_box.d_max);
-                        continue;
-                    }
-                    *num_in_range += 1;
-                }
-                BspNode::Branch {
-                    axis,
-                    split_at,
-                    children,
-                } => {
-                    let children = children as usize;
-                    let mut left_box = node_box.clone();
-                    let mut right_box = node_box;
-                    match axis {
-                        Axis::A => {
-                            if new_box.a_min < split_at {
-                                left_box.a_max = split_at;
-                                add_box_node(tree, children, left_box, new_box);
-                            }
-                            if new_box.a_max > split_at {
-                                right_box.a_min = split_at;
-                                add_box_node(tree, children + 1, right_box, new_box);
-                            }
-                        }
-                        Axis::B => {
-                            if new_box.b_min < split_at {
-                                left_box.b_max = split_at;
-                                add_box_node(tree, children, left_box, new_box);
-                            }
-                            if new_box.b_max > split_at {
-                                right_box.b_min = split_at;
-                                add_box_node(tree, children + 1, right_box, new_box);
-                            }
-                        }
-                        Axis::C => {
-                            if new_box.c_min < split_at {
-                                left_box.c_max = split_at;
-                                add_box_node(tree, children, left_box, new_box);
-                            }
-                            if new_box.c_max > split_at {
-                                right_box.c_min = split_at;
-                                add_box_node(tree, children + 1, right_box, new_box);
-                            }
-                        }
-                        Axis::D => {
-                            if new_box.d_min < split_at {
-                                left_box.d_max = split_at;
-                                add_box_node(tree, children, left_box, new_box);
-                            }
-                            if new_box.d_max > split_at {
-                                right_box.d_min = split_at;
-                                add_box_node(tree, children + 1, right_box, new_box);
-                            }
-                        }
-                    }
-                }
-            }
-            break;
-        }
-    }
-
-    fn split_node(tree: &mut BspTree, node: usize, axis: Axis, split_at: i32) {
-        let num_in_range = match tree[node] {
-            BspNode::Leaf { num_in_range } => num_in_range,
-            BspNode::Branch { .. } => panic!("Tried to split branch node"),
-        };
-        let children = tree.len() as u32;
-        tree.push(BspNode::Leaf { num_in_range });
-        tree.push(BspNode::Leaf { num_in_range });
-        tree[node] = BspNode::Branch {
-            axis,
-            split_at,
-            children,
-        };
-    }
-
-    add_box_node(
-        tree,
-        0,
-        Box4d {
-            a_min: i32::MIN,
-            a_max: i32::MAX,
-            b_min: i32::MIN,
-            b_max: i32::MAX,
-            c_min: i32::MIN,
-            c_max: i32::MAX,
-            d_min: i32::MIN,
-            d_max: i32::MAX,
-        },
-        new_box,
-    );
 }
